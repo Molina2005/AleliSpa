@@ -5,11 +5,17 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"github.com/joho/godotenv"
+	"time"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/joho/godotenv"
 )
 
-func conexionBaseDatos() *sql.DB{
+func FechaDDMMYYYY(fecha string)(time.Time, error){
+	formatoFecha := "01-02-06"
+	return time.Parse(formatoFecha, fecha)
+}
+
+func ConexionBaseDatos() *sql.DB{
 	err := godotenv.Load()
 	if err != nil{
 		log.Fatal("Error al cargar el archivo .env",err)
@@ -37,29 +43,66 @@ func conexionBaseDatos() *sql.DB{
 	return db
 }
 
-func main() {
-	// CONEXION BASE DE DATOS
-	db := conexionBaseDatos()
-
-	// REGISTRAR UNA CLIENTE
+func RegistrarCliente(db *sql.DB){
 	fmt.Println("Nuevo cliente")
-
-	var nombre string
-	var telefono string
-	var email string
-
+	var nombre,apellido,telefono,email,direccion,fechaRegistro string
+	
 	fmt.Println("Nombre")
 	fmt.Scanln(&nombre)
-	fmt.Println("telefono")
+	fmt.Println("Apellido")
+	fmt.Scanln(&apellido)
+	fmt.Println("Telefono")
 	fmt.Scanln(&telefono)
-	fmt.Println("email")
+	fmt.Println("Email")
 	fmt.Scanln(&email)
-	
-	query := "INSERT INTO clientes (nombre, telefono, email) VALUES(?,?,?)"
-	_, err := db.Exec(query, nombre,telefono,email)
+	fmt.Println("Direccion")
+	fmt.Scanln(&direccion)
+	fmt.Println("Fecha registro")
+	fmt.Scanln(&fechaRegistro)
+
+	fecha, err := FechaDDMMYYYY(fechaRegistro)
+	if err != nil {
+		log.Fatal("error al formatear la fecha", err)
+	}
+
+	query := "INSERT INTO CLIENTES (NOMBRE, APELLIDO, TELEFONO, EMAIL, DIRECCION, FECHA_REGISTRO) VALUES(?,?,?,?,?,?)"
+	_, err = db.Exec(query, nombre,apellido, telefono, email, direccion, fecha)
 	if err != nil{
 		log.Fatal("Error al insertar el cliente", err)
 	}else{
 		fmt.Println("Cliente insertado correctamente")
 	}
+}
+
+func AgendarCita(db *sql.DB){
+	fmt.Println("AGENDACION DE CITA")
+	var fechaCita, horaCita, procedimiento, observaciones string
+
+	fmt.Println("Inserte la fecha en que desea la cita, Ejemplo: 10-08-25 (DD-MM-YYY)")
+	fmt.Scanln(&fechaCita)
+	fmt.Println("Inserte la hora en que desea la cita, Ejmeplo: 14:00 (Hora militar)")
+	fmt.Scanln(&horaCita)
+	fmt.Println("Inserte el procedimiento que desea")
+	fmt.Scanln(&procedimiento)
+	fmt.Println("Inserte alguna observacion a tener en cuenta, en caso de no tener digite N/A")
+	fmt.Scanln(&observaciones)
+
+	fecha, err := FechaDDMMYYYY(fechaCita)
+	if err != nil {
+		log.Fatal("Error al formatear la fecha", err)
+	}
+
+	query := "INSERT INTO CITAS (FECHA_CITA, HORA_CITA, PROCEDIMIENTO, OBSERVACIONES) VALUES (?,?,?,?)"
+	_, err = db.Exec(query, fecha, horaCita, procedimiento, observaciones)
+	if err != nil {
+		log.Fatal("Error al insertar la cita", err)
+	}else {
+		fmt.Println("cita insertada correctamente")
+	}
+}
+
+func main() {
+	db := ConexionBaseDatos()
+	RegistrarCliente(db)
+	AgendarCita(db)
 }
